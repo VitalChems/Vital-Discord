@@ -594,6 +594,55 @@ async def reactionrole(interaction: discord.Interaction, channel: discord.TextCh
 
 
 # ═══════════════════════════════════════════════════════════
+#  SLASH COMMANDS — EMBED
+# ═══════════════════════════════════════════════════════════
+
+@bot.tree.command(name="embed", description="Post a custom embed in any channel.")
+@app_commands.describe(
+    channel="Channel to post in",
+    title="Embed title",
+    description="Embed body text",
+    color="Hex color code e.g. 00b4d8 (optional, default cyan)",
+    image_url="Image URL to show at the bottom (optional)",
+    thumbnail_url="Thumbnail URL top right (optional)"
+)
+@app_commands.default_permissions(manage_messages=True)
+async def embed_cmd(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel,
+    title: str,
+    description: str,
+    color: str = "00b4d8",
+    image_url: str = None,
+    thumbnail_url: str = None
+):
+    try:
+        hex_color = int(color.replace("#", ""), 16)
+    except ValueError:
+        hex_color = 0x00b4d8
+
+    embed = discord.Embed(title=title, description=description, color=hex_color)
+    embed.set_footer(text=f"Vital Chems • {now_str()}")
+
+    if thumbnail_url:
+        embed.set_thumbnail(url=thumbnail_url)
+    if image_url:
+        embed.set_image(url=image_url)
+
+    try:
+        await channel.send(embed=embed)
+        await interaction.response.send_message(
+            embed=vital_embed("Embed Posted", f"Your embed was posted in {channel.mention}.", color=0x2ecc71),
+            ephemeral=True
+        )
+        log_embed = vital_embed("Embed Posted", f"{interaction.user.mention} posted an embed in {channel.mention}", color=0x2ecc71)
+        log_embed.add_field(name="Title", value=title, inline=True)
+        await send_log(interaction.guild, log_embed)
+    except discord.Forbidden:
+        await interaction.response.send_message("I don't have permission to post in that channel.", ephemeral=True)
+
+
+# ═══════════════════════════════════════════════════════════
 #  SLASH COMMANDS — AUTO-MOD MANAGEMENT
 # ═══════════════════════════════════════════════════════════
 
