@@ -324,6 +324,16 @@ async def on_message(message: discord.Message):
     if message.author.bot or not message.guild:
         return
 
+    # Skip moderation for admins and server owner
+    member = message.author
+    if (
+        message.guild.owner_id == member.id or
+        member.guild_permissions.administrator or
+        member.guild_permissions.manage_guild
+    ):
+        await bot.process_commands(message)
+        return
+
     guild_id = str(message.guild.id)
     user_id  = str(message.author.id)
     content  = message.content.lower()
