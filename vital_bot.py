@@ -132,22 +132,40 @@ async def call_claude(system: str, user_message: str, max_tokens: int = 500) -> 
 MOD_SYSTEM = """You are a Discord moderation AI for Vital Peptides/Vital Chems, a research peptide community.
 
 Flag messages that contain ANY of the following:
-1. Anyone under 18 asking about or discussing peptides, HGH, steroids, SARMs, or any performance compounds
-2. Age mentions combined with compound discussion (e.g. "I'm 15", "my 14 year old", "im 16 should i")
-3. Advertising, promoting, or linking to other peptide/supplement suppliers or competitors
-4. Accusations that someone is a scammer, fraud, or fake supplier
-5. Chinese supplier references, sourcing requests, or "where to buy" questions pointing elsewhere
-6. Spam advertising of any product or service
-7. Injection/administration detailed guides
-8. Sexual content involving minors
-9. Threats or calls for violence
+
+UNDERAGE:
+- Anyone under 18 asking about or discussing peptides, HGH, steroids, SARMs, or any performance compounds
+- Age mentions combined with compound discussion (e.g. "I'm 15", "my 14 year old", "im 16 should i")
+- Anyone asking on behalf of a minor
+
+GREY MARKET / VENDORS:
+- References to Chinese suppliers, Chinese labs, Chinese peptides, or China-based vendors
+- Mentions of known grey market vendor sites or domains
+- "aliexpress", "taobao", "made in china", "chinese lab", "cn vendor", "overseas lab"
+- Promoting, recommending, or linking to ANY external peptide/research chemical supplier
+- "where to buy", "best source", "good source", "who sells", "any vendors", "supplier recommendations"
+- Posting discount codes, referral links, or affiliate links for any supplier
+- Mentioning specific vendor names that are not Vital Chems/Vital Peptides
+
+SCAMMER ACCUSATIONS:
+- Accusing anyone of being a scammer, fraudulent, fake, or sketchy supplier
+- "got scammed", "scam site", "fake peptides", "bunk product" about other vendors
+
+SPAM / ADVERTISING:
+- Advertising or promoting any external product, service, or business
+- Unsolicited promotions or sales pitches
+
+SAFETY:
+- Detailed injection or administration guides
+- Sexual content involving minors
+- Threats or calls for violence
 
 Respond ONLY in this exact JSON format:
-{"flagged": true, "reason": "brief reason", "category": "underage|advertising|scammer|sourcing|other"}
+{"flagged": true, "reason": "brief reason", "category": "underage|advertising|scammer|sourcing|vendor|other"}
 OR
 {"flagged": false, "reason": "", "category": ""}
 
-Be strict but fair. General research discussion is allowed."""
+Be strict on vendors and sourcing. General peptide research discussion is allowed."""
 
 CHAT_SYSTEM = """You are Vital Bot, the AI assistant for the Vital Peptides/Vital Chems Discord server — a research peptide community.
 
@@ -201,6 +219,12 @@ async def handle_violation(message: discord.Message, reason: str, category: str 
         detail = (
             "Your message contained sourcing requests or links to external suppliers. "
             "Sourcing discussions are not permitted in this server."
+        )
+    elif category == "vendor":
+        detail = (
+            "Your message referenced or promoted an external peptide vendor, grey market supplier, or Chinese lab. "
+            "We only support Vital Chems/Vital Peptides in this server. "
+            "External vendor discussion, sourcing requests, and supplier recommendations are not permitted."
         )
     else:
         detail = f"Your message violated our server rules. Reason: {reason}"
