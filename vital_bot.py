@@ -301,7 +301,7 @@ async def on_member_join(member: discord.Member):
     # DM the member
     try:
         await member.send(embed=embed)
-    except discord.Forbidden:
+    except (discord.Forbidden, discord.HTTPException):
         pass
 
     # Post in welcome channel
@@ -635,8 +635,9 @@ async def reactionrole(interaction: discord.Interaction, channel: discord.TextCh
 @app_commands.describe(
     channel="Channel to post in",
     title="Embed title",
-    description="Embed body text",
-    color="Hex color code e.g. 00b4d8 (optional, default cyan)",
+    description="Embed body text. Use \\n for new lines, \\t for tab indent.",
+    color="Hex color code e.g. e74c3c (optional, default cyan)",
+    footer="Custom footer text (optional)",
     image_url="Image URL to show at the bottom (optional)",
     thumbnail_url="Thumbnail URL top right (optional)"
 )
@@ -647,6 +648,7 @@ async def embed_cmd(
     title: str,
     description: str,
     color: str = "00b4d8",
+    footer: str = None,
     image_url: str = None,
     thumbnail_url: str = None
 ):
@@ -655,9 +657,14 @@ async def embed_cmd(
     except ValueError:
         hex_color = 0x00b4d8
 
-    embed = discord.Embed(title=title, description=description, color=hex_color)
-    embed.set_footer(text=f"Vital Chems • {now_str()}")
+    # Convert \n to real newlines and \t to tab/indent
+    description = description.replace("\\n", "\n").replace("\n", "\n").replace("\\t", "\u200b  ").replace("\t", "\u200b  ")
 
+    embed = discord.Embed(title=title, description=description, color=hex_color)
+
+    if footer:
+        embed.set_footer(text=footer)
+    # No footer if not specified — clean look
     if thumbnail_url:
         embed.set_thumbnail(url=thumbnail_url)
     if image_url:
