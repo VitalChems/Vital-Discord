@@ -348,6 +348,20 @@ async def on_message(message: discord.Message):
     if message.author.bot or not message.guild:
         return
 
+    # ── @mention AI chat (runs for everyone including admins) ────
+    if bot.user in message.mentions and len(message.content.strip()) > 2:
+        question = message.content.replace(f"<@{bot.user.id}>", "").strip()
+        if question:
+            async with message.channel.typing():
+                response = await call_claude(CHAT_SYSTEM, question, max_tokens=500)
+                if response:
+                    if len(response) > 1900:
+                        response = response[:1900] + "..."
+                    await message.reply(response)
+                else:
+                    await message.reply("Sorry, I couldn't process that right now. Try again shortly!")
+            return
+
     # Skip moderation for admins and server owner
     member = message.author
     if (
@@ -361,21 +375,6 @@ async def on_message(message: discord.Message):
     guild_id = str(message.guild.id)
     user_id  = str(message.author.id)
     content  = message.content.lower()
-
-    # ── @mention AI chat ─────────────────────────────────
-    if bot.user in message.mentions and len(message.content.strip()) > 2:
-        question = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        if question:
-            async with message.channel.typing():
-                response = await call_claude(CHAT_SYSTEM, question, max_tokens=500)
-                if response:
-                    # Split long responses
-                    if len(response) > 1900:
-                        response = response[:1900] + "..."
-                    await message.reply(response)
-                else:
-                    await message.reply("Sorry, I couldn't process that right now. Try again shortly!")
-            return
 
     # ── Manual bad word filter ───────────────────────────
     for word in get_bad_words(message.guild.id):
