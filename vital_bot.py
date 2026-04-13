@@ -280,11 +280,23 @@ async def handle_violation(message: discord.Message, reason: str, category: str 
 
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
+    # Sync to each guild individually for instant registration
+    total = 0
+    for guild in bot.guilds:
+        try:
+            cmds = await bot.tree.sync(guild=guild)
+            total += len(cmds)
+        except Exception as e:
+            print(f"Guild sync error {guild.id}: {e}")
+    # Also global sync
+    try:
+        await bot.tree.sync()
+    except Exception as e:
+        print(f"Global sync error: {e}")
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.watching, name="Vital Chems Server")
     )
-    print(f"Vital Bot v3 online as {bot.user} | AI: {'ON' if ANTHROPIC_API_KEY else 'OFF'}")
+    print(f"Vital Bot v3 online as {bot.user} | AI: {'ON' if ANTHROPIC_API_KEY else 'OFF'} | Commands synced: {total}")
 
 
 @bot.event
