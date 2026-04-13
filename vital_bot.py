@@ -885,6 +885,8 @@ async def help_cmd(interaction: discord.Interaction):
     embed.add_field(name="AI Chat", value="@mention the bot to ask any research question", inline=False)
     embed.add_field(name="Moderation", value="`/ban` `/kick` `/timeout` `/untimeout` `/purge`\n`/warn` `/warnings` `/clearwarnings`", inline=False)
     embed.add_field(name="Roles", value="`/roleall` — give a role to everyone\n`/reactionrole` — reaction role setup", inline=False)
+    embed.add_field(name="Leveling", value="`/rank` — check your level & XP\n`/leaderboard` — top 10 members\n`/resetxp` — reset a member's XP", inline=False)
+    embed.add_field(name="Embeds", value="`/embed` — post a custom embed in any channel\nUse `\\n` for new lines, `footer:` for custom footer", inline=False)
     embed.add_field(name="AI Auto-Mod", value="Auto-detects & removes:\n- Underage + substance talk\n- Advertisers & competitor promo\n- Scammer accusations\n- Sourcing requests\nDMs user with reason + rules link", inline=False)
     embed.add_field(name="Word Filter", value="`/addbadword` `/removebadword` `/listbadwords`", inline=False)
     embed.add_field(name="Custom Commands", value="`/addcmd` `/removecmd`", inline=False)
