@@ -70,6 +70,22 @@ custom_cmds_db = load_json(CUSTOM_CMDS_FILE, {})
 reaction_db    = load_json(REACTION_FILE, {})
 bad_words_db   = {}
 spam_tracker   = defaultdict(lambda: defaultdict(list))
+xp_db          = load_json("xp.json", {})
+xp_cooldown    = {}
+
+XP_PER_MESSAGE  = 10
+XP_COOLDOWN_SEC = 30
+
+def xp_for_level(level: int) -> int:
+    return 100 * (level ** 2) + 100 * level + 100
+
+def xp_progress(total_xp: int):
+    level = 0
+    xp = total_xp
+    while xp >= xp_for_level(level + 1):
+        xp -= xp_for_level(level + 1)
+        level += 1
+    return level, xp, xp_for_level(level + 1)
 
 def now_str():
     return datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -680,6 +696,81 @@ async def embed_cmd(
         await send_log(interaction.guild, log_embed)
     except discord.Forbidden:
         await interaction.response.send_message("I don't have permission to post in that channel.", ephemeral=True)
+
+
+# ═══════════════════════════════════════════════════════════
+#  SLASH COMMANDS — LEVELING
+# ═══════════════════════════════════════════════════════════
+
+@bot.tree.command(name="rank", description="Check your level and XP.")
+@app_commands.describe(member="Member to check (leave blank for yourself)")
+async def rank(interaction: discord.Interaction, member: discord.Member = None):
+    member = member or interaction.user
+    gid = str(interaction.guild.id)
+    uid = str(member.id)
+    data = xp_db.get(gid, {}).get(uid, {"xp": 0})
+    total_xp = data.get("xp", 0)
+    level, current_xp, needed_xp = xp_progress(total_xp)
+
+    # Build XP bar
+    filled = int((current_xp / needed_xp) * 20)
+    bar = "█" * filled + "░" * (20 - filled)
+
+    # Rank position
+    all_users = sorted(xp_db.get(gid, {}).items(), key=lambda x: x[1].get("xp", 0), reverse=True)
+    rank_pos = next((i + 1 for i, (uid2, _) in enumerate(all_users) if uid2 == uid), "?")
+
+    embed = discord.Embed(
+        title=f"{member.display_name}'s Rank",
+        color=0x00b4d8
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="Level", value=str(level), inline=True)
+    embed.add_field(name="Rank", value=f"#{rank_pos}", inline=True)
+    embed.add_field(name="Total XP", value=str(total_xp), inline=True)
+    embed.add_field(name=f"Progress to Level {level + 1}", value=f"`{bar}` {current_xp}/{needed_xp} XP", inline=False)
+    embed.set_footer(text="Vital Bot • Leveling System")
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="leaderboard", description="Show the top members by XP.")
+async def leaderboard(interaction: discord.Interaction):
+    gid = str(interaction.guild.id)
+    all_users = sorted(xp_db.get(gid, {}).items(), key=lambda x: x[1].get("xp", 0), reverse=True)[:10]
+
+    if not all_users:
+        await interaction.response.send_message(
+            embed=vital_embed("Leaderboard", "No XP data yet — start chatting!", color=0x00b4d8)
+        )
+        return
+
+    embed = discord.Embed(title="XP Leaderboard", color=0x00b4d8)
+    embed.set_thumbnail(url=LOGO_URL)
+    medals = ["🥇", "🥈", "🥉"]
+    lines = []
+    for i, (uid, data) in enumerate(all_users):
+        medal = medals[i] if i < 3 else f"`#{i+1}`"
+        level, _, _ = xp_progress(data.get("xp", 0))
+        name = data.get("name", f"User {uid}")
+        lines.append(f"{medal} **{name}** — Level {level} ({data.get('xp', 0)} XP)")
+    embed.description = "\n".join(lines)
+    embed.set_footer(text="Vital Bot • Leveling System")
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="resetxp", description="Reset XP for a member.")
+@app_commands.describe(member="Member to reset")
+@app_commands.default_permissions(administrator=True)
+async def resetxp(interaction: discord.Interaction, member: discord.Member):
+    gid = str(interaction.guild.id)
+    uid = str(member.id)
+    if gid in xp_db and uid in xp_db[gid]:
+        xp_db[gid][uid]["xp"] = 0
+        save_json("xp.json", xp_db)
+    await interaction.response.send_message(
+        embed=vital_embed("XP Reset", f"{member.mention}'s XP has been reset to 0.", color=0x2ecc71),
+        ephemeral=True
+    )
 
 
 # ═══════════════════════════════════════════════════════════
